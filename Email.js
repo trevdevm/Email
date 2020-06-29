@@ -9,6 +9,7 @@ require("dotenv").config();
 
 const app = express();
 const port = process.env.PORT || 3001;
+const base = process.env.BASE_URL
 
 const corsOptions = ['http://localhost:3789', 'http://localhost:3789/contact'];
 app.use(cors(corsOptions));
@@ -37,8 +38,11 @@ app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
+    "Origin, X-Requested-With, Content-Type",
+    "Accept"
   );
+  res.header("Content-Type", "application/json",
+    "Access-Control-Allow-Methods", "POST")
   next();
 });
 
@@ -51,7 +55,7 @@ app.post("/send/", validationRules(), (req, res) => {
       console.error(`${err.value},`);
     })
     console.error(extracted);
-    return res.status(400).json({ errors: extracted });
+    return res.status(400).send({ errors: extracted });
   }
   else {
     const mailOptions = {
@@ -106,9 +110,11 @@ app.post('/report-violation', (req, res) => {
 
 app.all("*", (err, req, res) => {
   if (err) {
-    console.log(`Final catch route => ${err}`);
+    console.error(`Final catch route err => ${err}`);
     return res.status(500).end();
   }
+  console.log(`Catch Route hit/request url: ${req.originalUrl}`);
+  return res.status(404).render(`Couldn't find ${base}${req.originalUrl}`);
 })
 // start the server
 console.log(`Listening on port ${port}`);
