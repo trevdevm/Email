@@ -4,12 +4,15 @@ const bodyParser = require("body-parser");
 const { validationResult } = require("express-validator");
 const cors = require("cors");
 const helmet = require("helmet");
+const morgan = require("morgan");
+const winston = require("./config/winston");
 const validationRules = require("./validate");
 require("dotenv").config();
 
 const app = express();
 const port = process.env.PORT || 3001;
-const base = process.env.BASE_URL
+const base = process.env.BASE_URL;
+app.use(morgan('combined', { stream: winston.stream }));
 
 const corsOptions = ['http://localhost:3789', 'http://localhost:3789/contact'];
 app.use(cors(corsOptions));
@@ -35,14 +38,13 @@ app.use(bodyParser.urlencoded({ limit: "52428800", extended: true }));
 app.use(bodyParser.json({ limit: "52428800" }));
 
 app.use(function (req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
   res.header(
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type",
     "Accept"
   );
-  res.header("Content-Type", "application/json",
-    "Access-Control-Allow-Methods", "POST")
+  res.header("Content-Type", "application/json")
+  res.header("Access-Control-Allow-Methods", "POST")
   next();
 });
 
@@ -52,9 +54,9 @@ app.post("/send/", validationRules(), (req, res) => {
     const extracted = [];
     result.array().map((err) => {
       extracted.push({ [err.param]: err.msg })
-      console.error(`${err.value},`);
+      winston.error(`${err.value},`);
     })
-    console.error(extracted);
+    winston.error(extracted);
     return res.status(400).send({ errors: extracted });
   }
   else {
@@ -86,11 +88,12 @@ app.post("/send/", validationRules(), (req, res) => {
     });
     transporter.sendMail(mailOptions, (err, res) => {
       if (err) {
-        console.log(err);
+        winston.error(err);
         return res.status(404).end();
       }
     });
 
+    winston.info("Sucessful Email.");
     return res
       .status(200)
       .send({ auth: true, message: "MESSAGE RECEIVED!", name: req.body.name });
@@ -100,9 +103,9 @@ app.post("/send/", validationRules(), (req, res) => {
 
 app.post('/report-violation', (req, res) => {
   if (req.body) {
-    console.log('CSP Violation: ', req.body)
+    winston.info('CSP Violation: ', req.body);
   } else {
-    console.log('CSP Violation: No data received!')
+    winston.info('CSP Violation: No data received!');
   }
 
   res.status(204).end()
@@ -110,39 +113,40 @@ app.post('/report-violation', (req, res) => {
 
 app.all("*", (err, req, res) => {
   if (err) {
-    console.error(`Final catch route err => ${err}`);
+    winston.error(`Final catch route err => ${err}`);
     return res.status(500).end();
   }
-  console.log(`Catch Route hit/request url: ${req.originalUrl}`);
+  winston.info(`Catch Route hit/request url: ${req.originalUrl}`);
   return res.status(404).render(`Couldn't find ${base}${req.originalUrl}`);
 })
+
 // start the server
-console.log(`Listening on port ${port}`);
+winston.info(`Listening on port ${port}`);
 const server = app.listen(port);
 
 process.on('SIGINT', () => {
-  console.log("Graceful Shutdown");
+  winston.info("Graceful Shutdown");
   server.close((err) => {
     if (err) {
-      console.error(err);
+      winston.error(err);
       process.exit(1);
     }
 
-    console.log("Success");
+    winston.info("Success");
     process.exit(0);
   })
 })
 
 process.on('unhandledRejection', err => {
-  console.error(`${err.status} - ${err.message} unhandled rejection!`);
+  winston.error(`${err.status} - ${err.message} unhandled rejection!`);
   server.close((err) => {
-    console.info("Closing connections..");
+    winston.info("Closing connections..");
     if (err) {
-      console.error(err);
+      winston.error(err);
       process.exit(1);
     }
   })
-  console.error(`unhandled rejection! ${err.message} shutting down`);
+  winston.error(`unhandled rejection! ${err.message} shutting down`);
 
   process.exit(1);
 })
