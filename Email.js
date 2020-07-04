@@ -14,12 +14,11 @@ const port = process.env.PORT || 3001;
 const base = process.env.BASE_URL;
 app.use(morgan('combined', { stream: winston.stream }));
 
-const corsOptions = ['http://localhost:3789', 'http://localhost:3789/contact'];
+const corsOptions = ['http://127.0.0.1:3000', 'http://127.0.0.1:3000/contact'];
 app.use(cors(corsOptions));
 
 app.use(helmet());
 app.use(helmet.contentSecurityPolicy({
-  // Specify directives as normal.
   directives: {
     defaultSrc: ["'self'", 'devmunns.site'],
     scriptSrc: ["'self'", "'none'"],
@@ -30,7 +29,7 @@ app.use(helmet.contentSecurityPolicy({
     reportUri: '/report-violation',
     objectSrc: ["'none'"],
     upgradeInsecureRequests: true,
-    workerSrc: false  // This is not set.
+    workerSrc: false
   }
 }));
 
@@ -59,7 +58,8 @@ app.post("/send/", validationRules(), (req, res) => {
     winston.error(extracted);
     return res.status(400).send({ errors: extracted });
   }
-  else {
+
+  try {
     const mailOptions = {
       from: req.body.name,
       to: "trevsites@gmail.com",
@@ -76,7 +76,7 @@ app.post("/send/", validationRules(), (req, res) => {
 
     const auth = {
       type: "oauth2",
-      user: "trevsites@gmail.com",
+      user: process.env.DEV_EMAIL,
       clientId: process.env.CLIENT,
       clientSecret: process.env.SECRET,
       refreshToken: process.env.REF_TO,
@@ -86,6 +86,7 @@ app.post("/send/", validationRules(), (req, res) => {
       service: "gmail",
       auth: auth,
     });
+
     transporter.sendMail(mailOptions, (err, res) => {
       if (err) {
         winston.error(err);
@@ -97,6 +98,10 @@ app.post("/send/", validationRules(), (req, res) => {
     return res
       .status(200)
       .send({ auth: true, message: "MESSAGE RECEIVED!", name: req.body.name });
+  } catch (err) {
+
+    winston.error("Error sending email, this needs attention.");
+    next(err);
   }
 });
 
@@ -120,7 +125,6 @@ app.all("*", (err, req, res) => {
   return res.status(404).render(`Couldn't find ${base}${req.originalUrl}`);
 })
 
-// start the server
 winston.info(`Listening on port ${port}`);
 const server = app.listen(port);
 
