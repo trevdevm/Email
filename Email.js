@@ -1,4 +1,6 @@
 const nodemailer = require("nodemailer");
+const { google } = require("googleapis");
+const OAuth2 = google.auth.OAuth2;
 const express = require("express");
 const bodyParser = require("body-parser");
 const { validationResult } = require("express-validator");
@@ -60,6 +62,18 @@ app.post("/send/", validationRules(), (req, res) => {
   }
 
   try {
+    const oauth2Client = new OAuth2(
+      process.env.CLIENT,
+      process.env.SECRET,
+      "https://developers.google.com/oauthplayground"
+    );
+
+    oauth2Client.setCredentials({
+      refresh_token: process.env.REFRESH
+    });
+
+    const accessToken = oauth2Client.getAccessToken();
+
     const mailOptions = {
       from: req.body.name,
       to: "trevsites@gmail.com",
@@ -75,11 +89,12 @@ app.post("/send/", validationRules(), (req, res) => {
     };
 
     const auth = {
-      type: "oauth2",
+      type: "OAuth2",
       user: process.env.DEV_EMAIL,
       clientId: process.env.CLIENT,
       clientSecret: process.env.SECRET,
-      refreshToken: process.env.REF_TO,
+      refreshToken: process.env.REFRESH,
+      accessToken: accessToken
     };
 
     const transporter = nodemailer.createTransport({
@@ -91,7 +106,10 @@ app.post("/send/", validationRules(), (req, res) => {
       if (err) {
         winston.error(err);
         return res.status(404).end();
+
       }
+
+      transporter.close();
     });
 
     winston.info("Sucessful Email.");
@@ -125,8 +143,8 @@ app.all("*", (err, req, res) => {
   return res.status(404).render(`Couldn't find ${base}${req.originalUrl}`);
 })
 
-winston.info(`Listening on port ${port}`);
 const server = app.listen(port);
+winston.info(`Listening on port ${port}`);
 
 process.on('SIGINT', () => {
   winston.info("Graceful Shutdown");
