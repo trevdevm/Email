@@ -22,7 +22,7 @@ app.use(cors(corsOptions));
 app.use(helmet());
 app.use(helmet.contentSecurityPolicy({
   directives: {
-    defaultSrc: ["'self'", 'devmunns.site'],
+    defaultSrc: ["'self'", process.env.SHORT_BASE],
     scriptSrc: ["'self'", "'none'"],
     styleSrc: ["'none'"],
     fontSrc: ["'none'"],
