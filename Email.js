@@ -16,7 +16,7 @@ const port = process.env.PORT || 3001;
 const base = process.env.BASE_URL;
 app.use(morgan('combined', { stream: winston.stream }));
 
-const corsOptions = ['http://127.0.0.1:3000', 'http://127.0.0.1:3000/contact'];
+const corsOptions = [process.env.ROUTE1, process.env.ROUTE2];
 app.use(cors(corsOptions));
 
 app.use(helmet());
@@ -76,7 +76,7 @@ app.post("/send/", validationRules(), (req, res) => {
 
     const mailOptions = {
       from: req.body.name,
-      to: "trevsites@gmail.com",
+      to: process.env.DEV_EMAIL,
       subject: "My site contact from: " + req.body.name,
       text: req.body.message,
       html:

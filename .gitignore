@@ -14,7 +14,7 @@ package-lock.json
 # testing
 /coverage
 extras/
-#logs/
+logs/*.log
 
 # production
 /build
